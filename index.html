@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#12141f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Чек-лист">
+<title>Читательский чек-лист</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #12141f; }
+  body { -webkit-text-size-adjust: 100%; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="boot">Загружаю ваш прогресс…</div>
+</div>
+
+<style>
+  #root {
+    --ink: #12141f;
+    --surface: #1a1d2b;
+    --surface-2: #222639;
+    --line: #2e3348;
+    --text: #e7e5df;
+    --muted: #8b8fa4;
+    --gold: #c8a96a;
+    --teal: #6fa8a0;
+    --plum: #a68cc4;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    padding: 0 0 64px;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  #root *, #root *::before, #root *::after { box-sizing: border-box; }
+
+  .boot { padding: 80px 24px; text-align: center; color: var(--muted); }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 44px 0 28px; }
+  .hero h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 30px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+  }
+  .hero p { margin: 0 0 26px; color: var(--muted); font-size: 14px; max-width: 46ch; }
+
+  .shelf {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: flex-end;
+    padding: 14px 14px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+  .spine {
+    width: 5px;
+    height: 26px;
+    background: #2c3145;
+    border-radius: 1px;
+    flex: none;
+  }
+  .spine.read { background: var(--gold); }
+  .spine.current { background: var(--teal); }
+  .spine.want { background: var(--plum); }
+
+  .tally {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .tally .big {
+    font-family: var(--serif);
+    font-size: 34px;
+    line-height: 1;
+    color: var(--gold);
+  }
+  .tally .of { color: var(--muted); font-size: 14px; }
+  .tally .sep { color: var(--line); }
+  .tally .cur { color: var(--teal); font-size: 14px; }
+  .tally .wnt { color: var(--plum); font-size: 14px; }
+
+  /* ---------- controls ---------- */
+  .controls {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--ink);
+    padding: 14px 0 12px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
+  }
+  .search {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--text);
+    font: inherit;
+    padding: 9px 12px;
+    margin-bottom: 10px;
+  }
+  .search::placeholder { color: var(--muted); }
+  .search:focus-visible, .chip:focus-visible, .ghost:focus-visible,
+  .tick:focus-visible, .flag:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+
+  /* ---------- levels & sections ---------- */
+  .level { margin-top: 40px; }
+  .level-head { border-top: 1px solid var(--line); padding-top: 18px; }
+  .level-head h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+  .level-head .note { color: var(--muted); font-size: 13.5px; margin: 0; max-width: 52ch; }
+
+  details.sec { border-bottom: 1px solid var(--line); }
+  details.sec > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 2px;
+  }
+  details.sec > summary::-webkit-details-marker { display: none; }
+  .caret { color: var(--muted); font-size: 11px; width: 10px; flex: none; }
+  details[open] > summary .caret { transform: rotate(90deg); }
+  .sec-name { flex: 1; font-size: 15px; }
+  .sec-count { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .sec-count.done { color: var(--gold); }
+
+  .items { padding: 2px 0 14px; }
+
+  /* ---------- item ---------- */
+  .item { display: flex; gap: 11px; padding: 7px 0; align-items: flex-start; }
+  .item.hidden { display: none; }
+
+  .tick {
+    flex: none;
+    margin-top: 2px;
+    width: 17px;
+    height: 17px;
+    border: 1px solid #3d4358;
+    border-radius: 2px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+  }
+  .tick[aria-checked="true"] { background: var(--gold); border-color: var(--gold); }
+  .tick[aria-checked="true"]::after {
+    content: "";
+    position: absolute;
+    left: 5px; top: 1px;
+    width: 4px; height: 9px;
+    border: solid var(--ink);
+    border-width: 0 2px 2px 0;
+    transform: rotate(42deg);
+  }
+
+  .body { flex: 1; min-width: 0; }
+  .title { font-size: 14.5px; }
+  .item.done .title { color: var(--muted); text-decoration: line-through; text-decoration-color: #4a5068; }
+  .desc { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  .mode {
+    display: inline-block;
+    font-size: 11.5px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 0 5px;
+    margin-left: 6px;
+    white-space: nowrap;
+    vertical-align: 1px;
+  }
+
+  .flag {
+    flex: none;
+    background: none;
+    border: none;
+    color: #3d4358;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .flag[data-mark="none"] { color: #3d4358; }
+  .flag[data-mark="want"] { color: var(--plum); }
+  .flag[data-mark="current"] { color: var(--teal); }
+
+  .empty { color: var(--muted); padding: 30px 0; font-size: 14px; }
+
+  /* ---------- footer ---------- */
+  .foot { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .ghost {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .ghost:hover { color: var(--text); border-color: #454b63; }
+  .status { color: var(--muted); font-size: 12.5px; }
+
+  .transfer { margin-top: 16px; }
+  .transfer .note { color: var(--muted); font-size: 13px; margin: 0 0 8px; max-width: 52ch; }
+  .code {
+    width: 100%;
+    height: 84px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    padding: 9px 11px;
+    resize: vertical;
+  }
+  .code:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+  .foot-row { margin-top: 8px; }
+
+  @media (max-width: 520px) {
+    .hero h1 { font-size: 25px; }
+    .spine { width: 4px; height: 22px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .spine { transition: background 180ms ease; }
+    .caret { transition: transform 140ms ease; }
+  }
+</style>
+
+<script>
+(function () {
+  const DATA = [
+    {
+      level: "Уровень 1",
+      title: "Абсолютный минимум",
+      note: "С этого стоит начать. Слой, отсылки к которому предполагаются по умолчанию.",
+      open: true,
+      sections: [
+        { name: "Мифологическая и религиозная база", items: [
+          { t: "Мифы Древней Греции", m: "сюжеты", d: "Троянская война и конь, Одиссей, Геракл и 12 подвигов, Прометей, Пандора, Эдип, Орфей и Эвридика, Икар, Сизиф, Нарцисс, Мидас, ахиллесова пята, Тесей и Минотавр, Персей и Медуза" },
+          { t: "Библия: ключевые сюжеты", m: "сюжеты", d: "Сотворение мира, Адам и Ева, Каин и Авель, Ноев ковчег, Вавилонская башня, Авраам и Исаак, Содом и Гоморра, Моисей и Исход, Давид и Голиаф, Соломон, Иов, Иона; Рождество, Нагорная проповедь, притчи о блудном сыне и добром самаритянине, Тайная вечеря, Иуда, распятие и воскресение, Апокалипсис" },
+          { t: "Скандинавская мифология", m: "сборник", d: "Один, Тор, Локи, Иггдрасиль, Вальхалла, Рагнарёк, Фенрир, смерть Бальдра" },
+          { t: "Легенды о короле Артуре", m: "сюжеты", d: "Мерлин, меч в камне и Экскалибур, Круглый стол, Ланселот и Гвиневра, Святой Грааль, Мордред, Авалон" },
+          { t: "«Тысяча и одна ночь»", m: "сборник", d: "Шахерезада и рамочный сюжет, Аладдин, Али-Баба, Синдбад" }
+        ]},
+        { name: "Античность и канон", items: [
+          { t: "Гомер — «Одиссея»", m: "чтение", d: "Из «Илиады» достаточно знать сюжет: гнев Ахилла, Гектор, падение Трои" },
+          { t: "Софокл — «Царь Эдип»", m: "чтение", d: "Пьеса короткая, читается за вечер" },
+          { t: "Данте — «Божественная комедия»", m: "чтение", d: "Читать «Ад», остальное сюжетно" },
+          { t: "Шекспир — «Гамлет»", m: "чтение" },
+          { t: "Шекспир — «Ромео и Джульетта»", m: "чтение" },
+          { t: "Шекспир — «Макбет»", m: "чтение" },
+          { t: "Сервантес — «Дон Кихот»", m: "сюжеты", d: "Сюжеты плюс выборочное чтение" },
+          { t: "Гёте — «Фауст»", m: "чтение", d: "Достаточно первой части" }
+        ]},
+        { name: "XIX век и русская классика", items: [
+          { t: "Пушкин — «Евгений Онегин»", m: "чтение" },
+          { t: "Гоголь — «Мёртвые души» или «Шинель»", m: "чтение" },
+          { t: "Достоевский — «Преступление и наказание»", m: "чтение" },
+          { t: "Толстой — «Анна Каренина»", m: "чтение" },
+          { t: "Мэри Шелли — «Франкенштейн»", m: "чтение" },
+          { t: "Брэм Стокер — «Дракула»", m: "чтение" },
+          { t: "Льюис Кэрролл — «Алиса в Стране чудес»", m: "чтение" },
+          { t: "Артур Конан Дойл — «Собака Баскервилей» + рассказы", m: "чтение" }
+        ]},
+        { name: "XX век", items: [
+          { t: "Кафка — «Превращение»", m: "чтение" },
+          { t: "Фицджеральд — «Великий Гэтсби»", m: "чтение" },
+          { t: "Оруэлл — «1984» и «Скотный двор»", m: "чтение" },
+          { t: "Хаксли — «О дивный новый мир»", m: "чтение" },
+          { t: "Булгаков — «Мастер и Маргарита»", m: "чтение" },
+          { t: "Харпер Ли — «Убить пересмешника»", m: "чтение" },
+          { t: "Маркес — «Сто лет одиночества»", m: "чтение" }
+        ]},
+        { name: "Массовая классика", items: [
+          { t: "Толкин — «Хоббит» и «Властелин колец»", m: "чтение", d: "Серия целиком" },
+          { t: "Дж. К. Роулинг — «Гарри Поттер»", m: "чтение", d: "Серия целиком" },
+          { t: "Фрэнк Герберт — «Дюна»", m: "чтение" },
+          { t: "Агата Кристи — «Убийство в „Восточном экспрессе“» и «И никого не стало»", m: "чтение" }
+        ]}
+      ]
+    },
+    {
+      level: "Уровень 2",
+      title: "Расширенный чек-лист",
+      note: "Рассчитан на несколько лет неспешного чтения. Разделы можно закрывать в любом порядке.",
+      open: false,
+      sections: [
+        { name: "I. Мифы, эпосы, священные тексты", items: [
+          { t: "«Эпос о Гильгамеше»", m: "сюжеты", d: "Дружба с Энкиду, поиск бессмертия, потоп" },
+          { t: "Гомер — «Илиада»", m: "сюжеты" },
+          { t: "Вергилий — «Энеида»", m: "сюжеты", d: "Бегство из Трои, Дидона, основание Рима" },
+          { t: "Овидий — «Метаморфозы»", m: "сборник", d: "Главный источник античных сюжетов в живописи" },
+          { t: "«Старшая Эдда» и «Младшая Эдда»", m: "сборник" },
+          { t: "«Беовульф»", m: "сюжеты", d: "Грендель, мать Гренделя, дракон" },
+          { t: "«Песнь о Роланде»", m: "сюжеты" },
+          { t: "«Песнь о Нибелунгах»", m: "сюжеты", d: "Зигфрид, Брунгильда, Кримхильда, проклятое золото" },
+          { t: "«Слово о полку Игореве»", m: "сюжеты" },
+          { t: "Легенды о Робин Гуде", m: "сюжеты", d: "Шервудский лес, Маленький Джон, брат Тук, Дева Мэриан, шериф Ноттингемский, принц Джон" },
+          { t: "Легенда о Тристане и Изольде", m: "сюжеты" },
+          { t: "Легенда о докторе Фаусте", m: "сюжеты" },
+          { t: "«Махабхарата» и «Рамаяна»", m: "сюжеты", d: "Кришна, Бхагавадгита, Рама и Сита, Хануман" },
+          { t: "Коран: узнаваемые сюжеты", m: "сюжеты", d: "Общие с Библией пророки, Юсуф, рай и ад" },
+          { t: "Японская и китайская мифология", m: "сюжеты", d: "Аматэрасу, Сунь Укун (Царь обезьян)" },
+          { t: "Эсхил — «Орестея»", m: "сюжеты", d: "Агамемнон, Клитемнестра, Электра, Орест" },
+          { t: "Еврипид — «Медея»", m: "чтение" },
+          { t: "Аристофан — «Лисистрата»", m: "сюжеты" }
+        ]},
+        { name: "II. Средневековье и Возрождение", items: [
+          { t: "Боккаччо — «Декамерон»", m: "сборник", d: "Выборочно" },
+          { t: "Чосер — «Кентерберийские рассказы»", m: "сборник", d: "Выборочно" },
+          { t: "Томас Мэлори — «Смерть Артура»", m: "адаптация" },
+          { t: "Макиавелли — «Государь»", m: "чтение", d: "Короткое" },
+          { t: "Рабле — «Гаргантюа и Пантагрюэль»", m: "сюжеты" },
+          { t: "Шекспир — «Король Лир»", m: "чтение" },
+          { t: "Шекспир — «Отелло»", m: "чтение" },
+          { t: "Шекспир — «Буря»", m: "чтение" },
+          { t: "Шекспир — «Сон в летнюю ночь»", m: "чтение" },
+          { t: "Шекспир — «Юлий Цезарь»", m: "сюжеты" },
+          { t: "Мильтон — «Потерянный рай»", m: "сюжеты", d: "Источник образа Сатаны в массовой культуре" }
+        ]},
+        { name: "III. XVII–XVIII века", items: [
+          { t: "Мольер — «Тартюф» или «Мизантроп»", m: "чтение" },
+          { t: "Дефо — «Робинзон Крузо»", m: "чтение" },
+          { t: "Свифт — «Путешествия Гулливера»", m: "чтение" },
+          { t: "Вольтер — «Кандид»", m: "чтение", d: "Короткое" },
+          { t: "Шодерло де Лакло — «Опасные связи»", m: "чтение" },
+          { t: "Гёте — «Страдания юного Вертера»", m: "чтение" },
+          { t: "Лоренс Стерн — «Тристрам Шенди»", m: "опционально" }
+        ]},
+        { name: "IV. XIX век: Европа", items: [
+          { t: "Джейн Остин — «Гордость и предубеждение»", m: "чтение" },
+          { t: "Эмили Бронте — «Грозовой перевал»", m: "чтение" },
+          { t: "Шарлотта Бронте — «Джейн Эйр»", m: "чтение" },
+          { t: "Диккенс — «Большие надежды»", m: "чтение" },
+          { t: "Диккенс — «Рождественская песнь»", m: "чтение", d: "Короткое" },
+          { t: "Стендаль — «Красное и чёрное»", m: "чтение" },
+          { t: "Бальзак — «Отец Горио»", m: "чтение" },
+          { t: "Гюго — «Отверженные»", m: "чтение", d: "Допустимо сокращённое издание" },
+          { t: "Гюго — «Собор Парижской Богоматери»", m: "чтение" },
+          { t: "Дюма — «Три мушкетёра»", m: "чтение" },
+          { t: "Дюма — «Граф Монте-Кристо»", m: "чтение" },
+          { t: "Флобер — «Госпожа Бовари»", m: "чтение" },
+          { t: "Жюль Верн — «20 000 лье под водой» или «Вокруг света за 80 дней»", m: "чтение" },
+          { t: "Оскар Уайльд — «Портрет Дориана Грея»", m: "чтение" },
+          { t: "Оскар Уайльд — «Как важно быть серьёзным»", m: "чтение" },
+          { t: "Стивенсон — «Странная история доктора Джекила и мистера Хайда»", m: "чтение" },
+          { t: "Стивенсон — «Остров сокровищ»", m: "чтение" },
+          { t: "Г. Дж. Уэллс — «Машина времени» и «Война миров»", m: "чтение" },
+          { t: "Ибсен — «Кукольный дом»", m: "чтение" },
+          { t: "Бодлер — «Цветы зла»", m: "сборник", d: "Выборочно" },
+          { t: "Братья Гримм и Андерсен — сказки", m: "сборник" }
+        ]},
+        { name: "V. XIX век: Россия", items: [
+          { t: "Лермонтов — «Герой нашего времени»", m: "чтение" },
+          { t: "Грибоедов — «Горе от ума»", m: "чтение", d: "Источник огромного числа бытовых цитат" },
+          { t: "Тургенев — «Отцы и дети»", m: "чтение" },
+          { t: "Достоевский — «Братья Карамазовы» или «Идиот»", m: "чтение" },
+          { t: "Толстой — «Война и мир»", m: "чтение" },
+          { t: "Чехов — «Вишнёвый сад» и «Чайка»", m: "чтение" },
+          { t: "Чехов — рассказы", m: "сборник", d: "«Дама с собачкой», «Палата № 6», «Крыжовник»" },
+          { t: "Салтыков-Щедрин — «История одного города»", m: "опционально" }
+        ]},
+        { name: "VI. XIX век: США", items: [
+          { t: "Эдгар Аллан По — рассказы и «Ворон»", m: "сборник" },
+          { t: "Герман Мелвилл — «Моби Дик»", m: "чтение", d: "Допустимо сокращение" },
+          { t: "Марк Твен — «Приключения Гекльберри Финна»", m: "чтение" },
+          { t: "Натаниэль Готорн — «Алая буква»", m: "чтение" },
+          { t: "Уолт Уитмен — «Листья травы»", m: "сборник", d: "Выборочно" }
+        ]},
+        { name: "VII. Модернизм", items: [
+          { t: "Пруст — «В сторону Свана»", m: "чтение", d: "Первого тома достаточно" },
+          { t: "Джойс — «Улисс»", m: "сюжеты", d: "Понимание замысла и структуры; чтение целиком не обязательно" },
+          { t: "Вирджиния Вулф — «Миссис Дэллоуэй»", m: "чтение" },
+          { t: "Кафка — «Процесс»", m: "чтение" },
+          { t: "Кафка — «Замок»", m: "опционально" },
+          { t: "Томас Манн — «Смерть в Венеции» или «Волшебная гора»", m: "чтение" },
+          { t: "Т. С. Элиот — «Бесплодная земля»", m: "сюжеты" },
+          { t: "Ремарк — «На Западном фронте без перемен»", m: "чтение" },
+          { t: "Хемингуэй — «Старик и море»", m: "чтение" },
+          { t: "Хемингуэй — «Прощай, оружие!»", m: "чтение" },
+          { t: "Стейнбек — «Гроздья гнева» или «О мышах и людях»", m: "чтение" },
+          { t: "Фолкнер — «Шум и ярость»", m: "опционально" },
+          { t: "Камю — «Посторонний»", m: "чтение" },
+          { t: "Камю — «Чума»", m: "чтение" },
+          { t: "Сартр — «Тошнота»", m: "опционально" },
+          { t: "Беккет — «В ожидании Годо»", m: "чтение" }
+        ]},
+        { name: "VIII. Русская литература XX века", items: [
+          { t: "Замятин — «Мы»", m: "чтение", d: "Прародитель «1984»" },
+          { t: "Платонов — «Котлован»", m: "опционально" },
+          { t: "Ильф и Петров — «Двенадцать стульев»", m: "чтение" },
+          { t: "Пастернак — «Доктор Живаго»", m: "чтение" },
+          { t: "Солженицын — «Один день Ивана Денисовича»", m: "чтение" },
+          { t: "Шаламов — «Колымские рассказы»", m: "сборник", d: "Выборочно" },
+          { t: "Набоков — «Лолита»", m: "чтение" },
+          { t: "Стругацкие — «Пикник на обочине»", m: "чтение" },
+          { t: "Стругацкие — «Трудно быть богом»", m: "чтение" },
+          { t: "Ахматова — «Реквием»", m: "чтение" },
+          { t: "Цветаева, Мандельштам, Бродский", m: "сборник", d: "Выборочно, по несколько стихотворений" },
+          { t: "Венедикт Ерофеев — «Москва — Петушки»", m: "чтение" }
+        ]},
+        { name: "IX. XX–XXI век: Европа и США", items: [
+          { t: "Голдинг — «Повелитель мух»", m: "чтение" },
+          { t: "Керуак — «В дороге»", m: "чтение" },
+          { t: "Сэлинджер — «Над пропастью во ржи»", m: "чтение" },
+          { t: "Джозеф Хеллер — «Уловка-22»", m: "чтение" },
+          { t: "Кен Кизи — «Пролетая над гнездом кукушки»", m: "чтение" },
+          { t: "Курт Воннегут — «Бойня номер пять»", m: "чтение" },
+          { t: "Энтони Бёрджесс — «Заводной апельсин»", m: "чтение" },
+          { t: "Умберто Эко — «Имя розы»", m: "чтение" },
+          { t: "Маргарет Этвуд — «Рассказ служанки»", m: "чтение" },
+          { t: "Кормак Маккарти — «Дорога»", m: "чтение" },
+          { t: "Харуки Мураками — «Норвежский лес» или «Кафка на пляже»", m: "чтение" },
+          { t: "Кадзуо Исигуро — «Не отпускай меня» или «Остаток дня»", m: "чтение" },
+          { t: "Патрик Зюскинд — «Парфюмер»", m: "чтение" },
+          { t: "Милан Кундера — «Невыносимая лёгкость бытия»", m: "чтение" },
+          { t: "Халед Хоссейни — «Бегущий за ветром»", m: "чтение" },
+          { t: "Донна Тартт — «Тайная история»", m: "чтение" },
+          { t: "Сильвия Плат — «Под стеклянным колпаком»", m: "чтение" },
+          { t: "Салли Руни — «Нормальные люди»", m: "чтение", d: "Современный разговорный маркер" }
+        ]},
+        { name: "X. Латинская Америка", items: [
+          { t: "Борхес — рассказы", m: "сборник", d: "«Вавилонская библиотека», «Сад расходящихся тропок», «Алеф»" },
+          { t: "Кортасар — «Игра в классики» или рассказы", m: "чтение" },
+          { t: "Исабель Альенде — «Дом духов»", m: "чтение" },
+          { t: "Маркес — «Любовь во время холеры»", m: "чтение" },
+          { t: "Пауло Коэльо — «Алхимик»", m: "чтение", d: "Узнаваемость выше литературной значимости, но встречается постоянно" }
+        ]},
+        { name: "XI. Азия", items: [
+          { t: "Цао Сюэцинь — «Сон в красном тереме»", m: "сюжеты" },
+          { t: "У Чэнъэнь — «Путешествие на Запад»", m: "сюжеты", d: "Сунь Укун, монах Сюаньцзан" },
+          { t: "Лу Синь — «Подлинная история А-Кью»", m: "опционально" },
+          { t: "Мурасаки Сикибу — «Повесть о Гэндзи»", m: "сюжеты" },
+          { t: "Юкио Мисима — «Золотой храм»", m: "чтение" },
+          { t: "Рюноскэ Акутагава — «Расёмон» и «В чаще»", m: "чтение", d: "Короткие, влияние огромное" },
+          { t: "Лю Цысинь — «Задача трёх тел»", m: "чтение" },
+          { t: "Хан Ган — «Вегетарианка»", m: "чтение" },
+          { t: "Омар Хайям — рубаи", m: "сборник", d: "Выборочно" }
+        ]},
+        { name: "XII. Африка и Ближний Восток", items: [
+          { t: "Чинуа Ачебе — «И пришло разрушение»", m: "чтение" },
+          { t: "Нагиб Махфуз — «Дети нашей улицы»", m: "опционально" },
+          { t: "Воле Шойинка — «Смерть и конюший короля»", m: "опционально" },
+          { t: "Чимаманда Нгози Адичи — «Американха»", m: "чтение" },
+          { t: "Чимаманда Нгози Адичи — «Половина жёлтого солнца»", m: "чтение", d: "Война в Биафре глазами трёх героев" },
+          { t: "Дж. М. Кутзее — «Бесчестье»", m: "чтение" },
+          { t: "Марджан Сатрапи — «Персеполис»", m: "чтение", d: "Графический роман, читается быстро" },
+          { t: "Орхан Памук — «Меня зовут Красный» или «Стамбул»", m: "чтение" }
+        ]},
+        { name: "XIII. Фэнтези и фантастика", items: [
+          { t: "Урсула Ле Гуин — «Волшебник Земноморья»", m: "чтение" },
+          { t: "Урсула Ле Гуин — «Левая рука Тьмы»", m: "чтение" },
+          { t: "К. С. Льюис — «Хроники Нарнии»", m: "чтение" },
+          { t: "Джордж Мартин — «Песнь Льда и Пламени»", m: "чтение", d: "Серия как культурный феномен" },
+          { t: "Терри Пратчетт — Плоский мир", m: "чтение", d: "Начать со «Стражи! Стражи!» или «Мор»" },
+          { t: "Нил Гейман — «Американские боги»", m: "чтение" },
+          { t: "Нил Гейман и Терри Пратчетт — «Благие знамения»", m: "чтение" },
+          { t: "Анджей Сапковский — «Ведьмак»", m: "чтение" },
+          { t: "Айзек Азимов — «Основание»", m: "чтение" },
+          { t: "Айзек Азимов — «Я, робот»", m: "чтение" },
+          { t: "Артур Кларк — «2001: Космическая одиссея»", m: "чтение" },
+          { t: "Филип К. Дик — «Мечтают ли андроиды об электроовцах?»", m: "чтение" },
+          { t: "Уильям Гибсон — «Нейромант»", m: "чтение" },
+          { t: "Дуглас Адамс — «Автостопом по галактике»", m: "чтение" },
+          { t: "Станислав Лем — «Солярис»", m: "чтение" },
+          { t: "Орсон Скотт Кард — «Игра Эндера»", m: "чтение" },
+          { t: "Сюзанна Коллинз — «Голодные игры»", m: "чтение" },
+          { t: "Хью Хауи — «Бункер» (серия Silo)", m: "чтение", d: "Первая книга трилогии, по ней снят сериал" },
+          { t: "Филип Пулман — «Тёмные начала»", m: "чтение" },
+          { t: "Мадлен Миллер — «Песнь Ахилла»", m: "чтение", d: "Современный шлюз в античность" }
+        ]},
+        { name: "XIV. Детектив, триллер, шпионский роман", items: [
+          { t: "Агата Кристи — «Убийство Роджера Экройда»", m: "чтение" },
+          { t: "Уилки Коллинз — «Лунный камень»", m: "опционально" },
+          { t: "Раймонд Чандлер — «Глубокий сон»", m: "чтение" },
+          { t: "Дэшил Хэммет — «Мальтийский сокол»", m: "чтение" },
+          { t: "Ян Флеминг — «Казино „Рояль“»", m: "чтение", d: "Одного романа достаточно" },
+          { t: "Джон Ле Карре — «Шпион, пришедший с холода»", m: "чтение" },
+          { t: "Томас Харрис — «Молчание ягнят»", m: "чтение" },
+          { t: "Стиг Ларссон — «Девушка с татуировкой дракона»", m: "чтение" },
+          { t: "Гиллиан Флинн — «Исчезнувшая»", m: "чтение" },
+          { t: "Дэн Браун — «Код да Винчи»", m: "чтение", d: "Как культурное явление" }
+        ]},
+        { name: "XV. Хоррор и готика", items: [
+          { t: "Стивен Кинг — «Сияние»", m: "чтение" },
+          { t: "Стивен Кинг — «Оно»", m: "чтение" },
+          { t: "Стивен Кинг — «Кэрри»", m: "чтение", d: "Достаточно одного-двух романов Кинга" },
+          { t: "Г. Ф. Лавкрафт — «Зов Ктулху» и «Хребты безумия»", m: "сборник" },
+          { t: "Генри Джеймс — «Поворот винта»", m: "чтение" },
+          { t: "Ширли Джексон — «Призрак дома на холме» и рассказ «Лотерея»", m: "чтение" },
+          { t: "Гастон Леру — «Призрак Оперы»", m: "сюжеты" }
+        ]},
+        { name: "XVI. Детская классика со взрослым весом", items: [
+          { t: "Антуан де Сент-Экзюпери — «Маленький принц»", m: "чтение" },
+          { t: "А. А. Милн — «Винни-Пух»", m: "чтение" },
+          { t: "Джеймс Барри — «Питер Пэн»", m: "сюжеты" },
+          { t: "Фрэнк Баум — «Волшебник страны Оз»", m: "сюжеты" },
+          { t: "Карло Коллоди — «Пиноккио»", m: "сюжеты" },
+          { t: "Астрид Линдгрен — «Пеппи Длинныйчулок» или «Карлсон»", m: "чтение" },
+          { t: "Туве Янссон — Муми-тролли", m: "чтение" },
+          { t: "Роальд Даль — «Чарли и шоколадная фабрика»", m: "чтение" },
+          { t: "Редьярд Киплинг — «Книга джунглей»", m: "чтение" }
+        ]},
+        { name: "XVII. Нон-фикшн с литературным статусом", items: [
+          { t: "Анна Франк — «Дневник Анны Франк»", m: "чтение" },
+          { t: "Виктор Франкл — «Человек в поисках смысла»", m: "чтение" },
+          { t: "Примо Леви — «Человек ли это?»", m: "чтение" },
+          { t: "Ханна Арендт — «Банальность зла»", m: "сюжеты", d: "Достаточно понимать тезис и спор вокруг него" },
+          { t: "Сунь-цзы — «Искусство войны»", m: "чтение", d: "Короткое" },
+          { t: "Марк Аврелий — «Размышления»", m: "сборник", d: "Выборочно" },
+          { t: "Платон — «Апология Сократа» и миф о пещере", m: "чтение" }
+        ]}
+      ]
+    },
+    {
+      level: "Уровень 3",
+      title: "Дополнительный",
+      note: "Высокая литературная репутация, низкая бытовая узнаваемость. В обязательный минимум не входит.",
+      open: false,
+      sections: [
+        { name: "Для тех, кто пойдёт вглубь", items: [
+          { t: "Роберт Музиль — «Человек без свойств»" },
+          { t: "Герман Брох — «Смерть Вергилия»" },
+          { t: "Томас Пинчон — «Радуга тяготения»" },
+          { t: "Дэвид Фостер Уоллес — «Бесконечная шутка»" },
+          { t: "Ален Роб-Грийе, Клод Симон — новый роман" },
+          { t: "Уильям Гэддис, Джон Барт — американский постмодернизм" },
+          { t: "Ласло Краснахоркаи — «Сатанинское танго»" },
+          { t: "Хуан Рульфо — «Педро Парамо»" },
+          { t: "Роберто Боланьо — «2666»" },
+          { t: "Кларисе Лиспектор — «Час звезды»" },
+          { t: "Витольд Гомбрович — «Фердидурка»" },
+          { t: "Данило Киш — «Гробница для Бориса Давидовича»" },
+          { t: "Бруно Шульц — «Коричные лавки»" },
+          { t: "Андрей Белый — «Петербург»" },
+          { t: "Саша Соколов — «Школа для дураков»" }
+        ]}
+      ]
+    }
+  ];
+
+  const KEY = "reading-tracker-v1";
+  const root = document.getElementById("root");
+  let state = {};
+  let filter = "all";
+  let query = "";
+  let allItems = [];
+
+  function hid(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return "b" + (h >>> 0).toString(36);
+  }
+
+  // Прогресс, перенесённый с предыдущего устройства. Применяется только к тем
+  // книгам, по которым в этом браузере ещё нет своей отметки.
+  const SEED_STATE = {"b1yqxg1o":{"read":true},"b1paod5":{"read":true},"b15k0zdz":{"read":true},"bba4yn2":{"read":true},"b2dhh6b":{"read":true},"bjn2tp":{"read":true},"b1udwu4e":{"read":true},"b1gtqmz1":{"read":true},"b1pwc6s0":{"read":true},"b1dy11r3":{"read":true},"b94y30z":{"read":true},"bmo5l66":{"read":true},"b1trnwiy":{"read":true},"b1g3lp99":{"read":true},"bdjpsu2":{"read":true},"b1piwsb":{"read":true},"bi2lfzv":{"read":true},"bl3nvip":{"read":true},"bmvuua8":{"read":true},"bq9dc4t":{"read":true},"b193oe3x":{"current":true},"b1bh21z6":{"want":true},"btbkndt":{"read":true}};
+
+  function applySeed() {
+    Object.keys(SEED_STATE).forEach(function (id) {
+      if (!state[id]) state[id] = Object.assign({}, SEED_STATE[id]);
+    });
+  }
+
+  const openSecs = new Set();
+
+  DATA.forEach(function (lv, li) {
+    lv.sections.forEach(function (sec, si) {
+      sec.key = "s" + li + "_" + si;
+      if (lv.open) openSecs.add(sec.key);
+      sec.items.forEach(function (it) {
+        it.id = hid(it.t);
+        allItems.push(it);
+      });
+    });
+  });
+
+  // Хранилище работает в двух средах: внутри просмотрщика артефактов
+  // и в обычной вкладке браузера, если файл открыт напрямую.
+  const Store = {
+    async read(k) {
+      if (window.storage && window.storage.get) {
+        try {
+          const r = await window.storage.get(k);
+          if (r && r.value) return r.value;
+        } catch (e) { /* ключа ещё нет или хранилище недоступно */ }
+      }
+      try { return window.localStorage.getItem(k); } catch (e) { return null; }
+    },
+    async write(k, v) {
+      let ok = false;
+      if (window.storage && window.storage.set) {
+        try { await window.storage.set(k, v); ok = true; } catch (e) { /* пробуем дальше */ }
+      }
+      try { window.localStorage.setItem(k, v); ok = true; } catch (e) { /* приватный режим */ }
+      return ok;
+    }
+  };
+
+  async function load() {
+    try {
+      const raw = await Store.read(KEY);
+      if (raw) state = JSON.parse(raw);
+    } catch (e) {
+      state = {};
+    }
+  }
+
+  let saveTimer = null;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async function () {
+      const ok = await Store.write(KEY, JSON.stringify(state));
+      setStatus(ok ? "Сохранено" : "Сохранить не вышло. Скопируйте код прогресса внизу страницы.");
+    }, 250);
+  }
+
+  function setStatus(text) {
+    const el = document.getElementById("status");
+    if (el) el.textContent = text;
+  }
+
+  function st(id) { return state[id] || {}; }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  function render() {
+    const total = allItems.length;
+    const read = allItems.filter(function (i) { return st(i.id).read; }).length;
+    const cur = allItems.filter(function (i) { return st(i.id).current && !st(i.id).read; }).length;
+    const want = allItems.filter(function (i) { return st(i.id).want && !st(i.id).read; }).length;
+
+    let html = '<div class="wrap">';
+
+    html += '<div class="hero">';
+    html += "<h1>Читательский чек-лист</h1>";
+    html += "<p>Культурный минимум и расширенный список. Отметки сохраняются, можно возвращаться в любой момент.</p>";
+    html += '<div class="shelf">';
+    allItems.forEach(function (it) {
+      const s = st(it.id);
+      const cls = s.read ? "spine read" : (s.current ? "spine current" : (s.want ? "spine want" : "spine"));
+      html += '<span class="' + cls + '" title="' + esc(it.t) + '"></span>';
+    });
+    html += "</div>";
+    html += '<div class="tally"><span class="big">' + read + "</span>";
+    html += '<span class="of">из ' + total + " прочитано</span>";
+    if (cur) html += '<span class="sep">/</span><span class="cur">' + cur + " в процессе</span>";
+    if (want) html += '<span class="sep">/</span><span class="wnt">' + want + " в планах</span>";
+    html += "</div></div>";
+
+    html += '<div class="controls">';
+    html += '<input class="search" id="q" type="search" placeholder="Поиск по автору или названию" value="' + esc(query) + '">';
+    html += '<div class="chips">';
+    [["all", "Все"], ["todo", "Не прочитано"], ["want", "Хочу прочитать"], ["current", "Читаю сейчас"], ["done", "Прочитано"]].forEach(function (f) {
+      html += '<button class="chip" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + "</button>";
+    });
+    html += "</div></div>";
+
+    let shownTotal = 0;
+
+    DATA.forEach(function (lv, li) {
+      let levelHtml = "";
+      let levelShown = 0;
+
+      lv.sections.forEach(function (sec, si) {
+        const visible = sec.items.filter(matches);
+        if (!visible.length) return;
+        levelShown += visible.length;
+
+        const done = sec.items.filter(function (i) { return st(i.id).read; }).length;
+        const open = openSecs.has(sec.key) || query || filter !== "all";
+
+        levelHtml += '<details class="sec" data-sec="' + sec.key + '"' + (open ? " open" : "") + ">";
+        levelHtml += '<summary><span class="caret">▶</span><span class="sec-name">' + esc(sec.name) + "</span>";
+        levelHtml += '<span class="sec-count' + (done === sec.items.length ? " done" : "") + '">' + done + "/" + sec.items.length + "</span></summary>";
+        levelHtml += '<div class="items">';
+
+        visible.forEach(function (it) {
+          const s = st(it.id);
+          levelHtml += '<div class="item' + (s.read ? " done" : "") + '">';
+          levelHtml += '<button class="tick" role="checkbox" aria-checked="' + !!s.read + '" aria-label="Прочитано: ' + esc(it.t) + '" data-toggle="' + it.id + '"></button>';
+          levelHtml += '<div class="body"><div class="title">' + esc(it.t);
+          if (it.m) levelHtml += '<span class="mode">' + esc(it.m) + "</span>";
+          levelHtml += "</div>";
+          if (it.d) levelHtml += '<div class="desc">' + esc(it.d) + "</div>";
+          levelHtml += "</div>";
+          const mark = s.current ? "current" : (s.want ? "want" : "none");
+          const markLabel = { none: "Отложить или начать", want: "Хочу прочитать", current: "Читаю сейчас" }[mark];
+          const markGlyph = { none: "＋", want: "★", current: "◆" }[mark];
+          levelHtml += '<button class="flag" data-mark="' + mark + '" title="' + markLabel + '" aria-label="' + markLabel + ": " + esc(it.t) + '" data-flag="' + it.id + '">' + markGlyph + "</button>";
+          levelHtml += "</div>";
+        });
+
+        levelHtml += "</div></details>";
+      });
+
+      if (!levelShown) return;
+      shownTotal += levelShown;
+
+      html += '<div class="level"><div class="level-head">';
+      html += "<h2>" + esc(lv.level) + ". " + esc(lv.title) + "</h2>";
+      html += '<p class="note">' + esc(lv.note) + "</p></div>";
+      html += levelHtml + "</div>";
+    });
+
+    if (!shownTotal) {
+      html += '<p class="empty">Ничего не нашлось. Попробуйте другой запрос или снимите фильтр.</p>';
+    }
+
+    html += '<div class="foot">';
+    html += '<button class="ghost" id="copy">Скопировать прочитанное</button>';
+    html += '<button class="ghost" id="backup">Перенести на другое устройство</button>';
+    html += '<button class="ghost" id="reset">Сбросить все отметки</button>';
+    html += '<span class="status" id="status"></span>';
+    html += "</div>";
+
+    html += '<div class="transfer" id="transfer" hidden>';
+    html += '<p class="note">Скопируйте этот код и вставьте его в то же поле на другом устройстве, затем нажмите «Загрузить».</p>';
+    html += '<textarea class="code" id="code" spellcheck="false"></textarea>';
+    html += '<div class="foot-row"><button class="ghost" id="apply">Загрузить прогресс из кода</button></div>';
+    html += "</div>";
+
+    html += "</div>";
+
+    const scroll = window.scrollY;
+    root.innerHTML = html;
+    window.scrollTo(0, scroll);
+    bind();
+  }
+
+  function matches(it) {
+    const s = st(it.id);
+    if (filter === "done" && !s.read) return false;
+    if (filter === "todo" && s.read) return false;
+    if (filter === "current" && !(s.current && !s.read)) return false;
+    if (filter === "want" && !(s.want && !s.read)) return false;
+    if (query) {
+      const hay = (it.t + " " + (it.d || "")).toLowerCase();
+      if (hay.indexOf(query.toLowerCase()) === -1) return false;
+    }
+    return true;
+  }
+
+  function bind() {
+    root.querySelectorAll("details[data-sec]").forEach(function (d) {
+      d.addEventListener("toggle", function () {
+        const key = d.getAttribute("data-sec");
+        if (d.open) openSecs.add(key); else openSecs.delete(key);
+      });
+    });
+
+    root.querySelectorAll("[data-toggle]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        const id = b.getAttribute("data-toggle");
+        const s = state[id] || (state[id] = {});
+        s.read = !s.read;
+        if (s.read) { s.current = false; s.want = false; }
+        save();
+        render();
+      });
+    });
+
+    root.querySelectorAll("[data-flag]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        const id = b.getAttribute("data-flag");
+        const s = state[id] || (state[id] = {});
+        if (s.current) { s.current = false; s.want = false; }
+        else if (s.want) { s.want = false; s.current = true; }
+        else { s.want = true; }
+        if (s.want || s.current) s.read = false;
+        save();
+        render();
+      });
+    });
+
+    root.querySelectorAll("[data-filter]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        filter = b.getAttribute("data-filter");
+        render();
+      });
+    });
+
+    const q = document.getElementById("q");
+    if (q) {
+      q.addEventListener("input", function () {
+        const pos = q.selectionStart;
+        query = q.value;
+        render();
+        const nq = document.getElementById("q");
+        nq.focus();
+        nq.setSelectionRange(pos, pos);
+      });
+    }
+
+    const copy = document.getElementById("copy");
+    if (copy) {
+      copy.addEventListener("click", function () {
+        const lines = allItems.filter(function (i) { return st(i.id).read; }).map(function (i) { return "— " + i.t; });
+        const text = lines.length ? lines.join("\n") : "Пока ничего не отмечено.";
+        navigator.clipboard.writeText(text).then(
+          function () { setStatus("Список скопирован"); },
+          function () { setStatus("Скопировать не получилось"); }
+        );
+      });
+    }
+
+    const backup = document.getElementById("backup");
+    if (backup) {
+      backup.addEventListener("click", function () {
+        const box = document.getElementById("transfer");
+        const code = document.getElementById("code");
+        box.hidden = !box.hidden;
+        if (!box.hidden) {
+          code.value = JSON.stringify(state);
+          code.focus();
+          code.select();
+          setStatus("Код готов к копированию");
+        }
+      });
+    }
+
+    const apply = document.getElementById("apply");
+    if (apply) {
+      apply.addEventListener("click", function () {
+        const code = document.getElementById("code");
+        try {
+          const parsed = JSON.parse(code.value.trim());
+          if (!parsed || typeof parsed !== "object") throw new Error("bad");
+          state = parsed;
+          save();
+          render();
+          setStatus("Прогресс загружен");
+        } catch (e) {
+          setStatus("Код не распознан. Вставьте его целиком, без пробелов по краям.");
+        }
+      });
+    }
+
+    const reset = document.getElementById("reset");
+    if (reset) {
+      reset.addEventListener("click", function () {
+        if (reset.dataset.armed) {
+          state = {};
+          save();
+          render();
+          setStatus("Отметки сброшены");
+        } else {
+          reset.dataset.armed = "1";
+          reset.textContent = "Точно сбросить?";
+          setTimeout(function () {
+            if (document.body.contains(reset)) {
+              delete reset.dataset.armed;
+              reset.textContent = "Сбросить все отметки";
+            }
+          }, 4000);
+        }
+      });
+    }
+  }
+
+  load().then(function () {
+    applySeed();
+    save();
+    render();
+  });
+})();
+</script>
+
+</body>
+</html>
