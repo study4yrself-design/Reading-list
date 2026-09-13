@@ -597,9 +597,8 @@
     return "b" + (h >>> 0).toString(36);
   }
 
-  // Прогресс, перенесённый с предыдущего устройства. Применяется только к тем
-  // книгам, по которым в этом браузере ещё нет своей отметки.
-  const SEED_STATE = {"b1yqxg1o":{"read":true},"b1paod5":{"read":true},"b15k0zdz":{"read":true},"bba4yn2":{"read":true},"b2dhh6b":{"read":true},"bjn2tp":{"read":true},"b1udwu4e":{"read":true},"b1gtqmz1":{"read":true},"b1pwc6s0":{"read":true},"b1dy11r3":{"read":true},"b94y30z":{"read":true},"bmo5l66":{"read":true},"b1trnwiy":{"read":true},"b1g3lp99":{"read":true},"bdjpsu2":{"read":true},"b1piwsb":{"read":true},"bi2lfzv":{"read":true},"bl3nvip":{"read":true},"bmvuua8":{"read":true},"bq9dc4t":{"read":true},"b193oe3x":{"current":true},"b1bh21z6":{"want":true},"btbkndt":{"read":true}};
+  // Стартовых отметок нет: каждый начинает список с нуля.
+  const SEED_STATE = {};
 
   function applySeed() {
     Object.keys(SEED_STATE).forEach(function (id) {
